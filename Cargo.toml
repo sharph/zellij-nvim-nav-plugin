@@ -1,0 +1,7 @@
+[package]
+name = "zellij-nvim-nav-plugin"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+zellij-tile = "0.42.2"
