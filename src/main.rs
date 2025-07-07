@@ -5,7 +5,7 @@ use zellij_tile::prelude::*;
 struct State {
     permissions_granted: bool,
     match_commands: Vec<String>,
-    action: Option<(Direction, u8)>,
+    action: Option<(Direction, Vec<u8>)>,
 }
 
 impl Default for State {
@@ -40,41 +40,34 @@ impl ZellijPlugin for State {
     }
 
     fn update(&mut self, event: Event) -> bool {
-        match event {
-            Event::ListClients(clients) => {
-                let Some(command) = clients
-                    .iter()
-                    .find(|c| c.is_current_client && !c.running_command.is_empty())
-                    .map(|c| {
-                        c.running_command
-                            .trim()
-                            .split_whitespace()
-                            .collect::<Vec<_>>()[0]
-                            .split('/')
-                            .last()
-                            .unwrap_or("")
-                            .to_string()
-                    })
-                else {
-                    return false;
-                };
-                let Some(action) = self.action else {
-                    return false;
-                };
-                if self.match_commands.contains(&command) {
-                    // forward to nvim
-                    write(vec![action.1]);
+        if let Event::ListClients(clients) = event {
+            let Some(command) = clients
+                .iter()
+                .find(|c| c.is_current_client && !c.running_command.is_empty())
+                .map(|c| {
+                    c.running_command.split_whitespace().collect::<Vec<_>>()[0]
+                        .split('/')
+                        .next_back()
+                        .unwrap_or("")
+                        .to_string()
+                })
+            else {
+                return false;
+            };
+            let Some(action) = self.action.take() else {
+                return false;
+            };
+            if self.match_commands.contains(&command) {
+                // forward to nvim
+                write(action.1);
+            } else {
+                // send to zellij
+                if action.0 == Direction::Left || action.0 == Direction::Right {
+                    move_focus_or_tab(action.0);
                 } else {
-                    // send to zellij
-                    if action.0 == Direction::Left || action.0 == Direction::Right {
-                        move_focus_or_tab(action.0);
-                    } else {
-                        move_focus(action.0);
-                    }
+                    move_focus(action.0);
                 }
-                self.action = None;
             }
-            _ => {}
         }
         false
     }
@@ -89,10 +82,22 @@ impl ZellijPlugin for State {
                 return false;
             }
         };
-        let Some(Ok(key)) = pipe_message.payload.map(|p| p.parse::<u8>()) else {
+        let Some(payload) = pipe_message.payload else {
             return false;
         };
-        self.action = Some((direction, key));
+
+        let bytes: Result<Vec<u8>, _> =
+            payload.split(',').map(|s| s.trim().parse::<u8>()).collect();
+
+        let Ok(key_sequence) = bytes else {
+            return false;
+        };
+
+        if key_sequence.is_empty() {
+            return false;
+        }
+
+        self.action = Some((direction, key_sequence));
         list_clients();
         false
     }
