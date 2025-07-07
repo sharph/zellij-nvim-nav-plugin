@@ -2,10 +2,16 @@ use std::collections::BTreeMap;
 
 use zellij_tile::prelude::*;
 
+struct Action {
+    direction: Direction,
+    or_tab: bool,
+    key_sequence: Vec<u8>,
+}
+
 struct State {
     permissions_granted: bool,
     match_commands: Vec<String>,
-    action: Option<(Direction, Vec<u8>)>,
+    action: Option<Action>,
 }
 
 impl Default for State {
@@ -59,13 +65,15 @@ impl ZellijPlugin for State {
             };
             if self.match_commands.contains(&command) {
                 // forward to nvim
-                write(action.1);
+                write(action.key_sequence);
             } else {
                 // send to zellij
-                if action.0 == Direction::Left || action.0 == Direction::Right {
-                    move_focus_or_tab(action.0);
+                if action.or_tab
+                    && (action.direction == Direction::Left || action.direction == Direction::Right)
+                {
+                    move_focus_or_tab(action.direction);
                 } else {
-                    move_focus(action.0);
+                    move_focus(action.direction);
                 }
             }
         }
@@ -73,11 +81,13 @@ impl ZellijPlugin for State {
     }
 
     fn pipe(&mut self, pipe_message: PipeMessage) -> bool {
-        let direction = match &*pipe_message.name {
-            "nvim_nav_left" => Direction::Left,
-            "nvim_nav_right" => Direction::Right,
-            "nvim_nav_up" => Direction::Up,
-            "nvim_nav_down" => Direction::Down,
+        let (direction, or_tab) = match &*pipe_message.name {
+            "nvim_nav_left" => (Direction::Left, false),
+            "nvim_nav_right" => (Direction::Right, false),
+            "nvim_nav_left_tab" => (Direction::Left, true),
+            "nvim_nav_right_tab" => (Direction::Right, true),
+            "nvim_nav_up" => (Direction::Up, false),
+            "nvim_nav_down" => (Direction::Down, false),
             _ => {
                 return false;
             }
@@ -97,7 +107,11 @@ impl ZellijPlugin for State {
             return false;
         }
 
-        self.action = Some((direction, key_sequence));
+        self.action = Some(Action {
+            direction,
+            or_tab,
+            key_sequence,
+        });
         list_clients();
         false
     }
