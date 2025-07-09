@@ -46,6 +46,10 @@ load_plugins {
         bind "Ctrl k" { MessagePlugin { name "nvim_nav_up"; payload "11"; }; }
         bind "Ctrl l" { MessagePlugin { name "nvim_nav_right"; payload "12"; }; }
 
+        // Use the _tab variants to navigate between panes and switch tabs when at the edge
+        bind "Ctrl h" { MessagePlugin { name "nvim_nav_left_tab"; payload "8"; }; }
+        bind "Ctrl l" { MessagePlugin { name "nvim_nav_right_tab"; payload "12"; }; }
+
         // Multi-byte payloads for Alt key combinations (ESC + key)
         bind "Alt h" { MessagePlugin { name "nvim_nav_left"; payload "27,104"; }; }
         bind "Alt j" { MessagePlugin { name "nvim_nav_down"; payload "27,106"; }; }
