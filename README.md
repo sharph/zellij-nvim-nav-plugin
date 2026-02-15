@@ -18,6 +18,12 @@ The payload field accepts comma-separated byte values. You can refer to [ASCII
 table](https://www.asciitable.com/) to find the byte values for the keys you
 want to use.
 
+## Configuration Options
+
+The plugin supports the following configuration option:
+
+- `match_commands`: Comma-separated list of commands to match (default: `vim,nvim`)
+
 ## Example Configuration
 
 ```plain
@@ -56,4 +62,15 @@ load_plugins {
         bind "Alt k" { MessagePlugin { name "nvim_nav_up"; payload "27,107"; }; }
         bind "Alt l" { MessagePlugin { name "nvim_nav_right"; payload "27,108"; }; }
     }
+```
+
+Example with custom commands:
+
+```plain
+plugins {
+    ...
+    nvim-nav location="file:/home/youruser/some_dir/zellij-nvim-nav-plugin.wasm" {
+        match_commands "vim,nvim,hx"
+    }
+}
 ```
